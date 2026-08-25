@@ -9,6 +9,8 @@ RUN apt-get update && apt-get install -y \
     libudunits2-dev \
     libgeos-dev \
     libproj-dev \
+    cmake \
+    libabsl-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install required R packages

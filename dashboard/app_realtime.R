@@ -24,7 +24,8 @@ get_db_conn <- function() {
             port = PG_PORT,
             user = PG_USER,
             password = PG_PASS,
-            dbname = PG_DB)
+            dbname = PG_DB,
+            bigint = "numeric")
 }
 
 ui <- page_navbar(
@@ -189,7 +190,8 @@ server <- function(input, output, session) {
       ORDER BY time DESC
       LIMIT 100;
     "
-    dbGetQuery(conn, query)
+    dbGetQuery(conn, query) %>%
+      mutate(last_seen = as.character(last_seen))
   })
   
   # Trend Plot
