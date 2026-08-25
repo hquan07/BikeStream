@@ -9,6 +9,8 @@ RUN apt-get update && apt-get install -y \
     libudunits2-dev \
     libgeos-dev \
     libproj-dev \
+    cmake \
+    libabsl-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install required R packages
@@ -23,4 +25,4 @@ COPY www /srv/shiny-server/www
 EXPOSE 3838
 
 # Run
-CMD ["/usr/bin/shiny-server"]
+CMD printenv > /srv/shiny-server/.Renviron && /usr/bin/shiny-server
