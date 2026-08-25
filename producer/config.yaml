@@ -1,0 +1,31 @@
+poll_interval_seconds: 30
+
+kafka:
+  bootstrap_servers: ${KAFKA_BROKER:-kafka:9092}
+  topic: station_status
+
+cities:
+  - name: chicago
+    system: divvy
+    status_url: https://gbfs.lyft.com/gbfs/1.1/chi/en/station_status.json
+    info_url: https://gbfs.lyft.com/gbfs/1.1/chi/en/station_information.json
+
+  - name: new_york
+    system: citibike
+    status_url: https://gbfs.citibikenyc.com/gbfs/2.3/en/station_status.json
+    info_url: https://gbfs.citibikenyc.com/gbfs/2.3/en/station_information.json
+
+  - name: san_francisco
+    system: bay_wheels
+    status_url: https://gbfs.lyft.com/gbfs/1.1/bay/en/station_status.json
+    info_url: https://gbfs.lyft.com/gbfs/1.1/bay/en/station_information.json
+
+  - name: washington_dc
+    system: capital_bikeshare
+    status_url: https://gbfs.lyft.com/gbfs/1.1/dca/en/station_status.json
+    info_url: https://gbfs.lyft.com/gbfs/1.1/dca/en/station_information.json
+
+  - name: boston
+    system: bluebikes
+    status_url: https://gbfs.lyft.com/gbfs/1.1/bos/en/station_status.json
+    info_url: https://gbfs.lyft.com/gbfs/1.1/bos/en/station_information.json
