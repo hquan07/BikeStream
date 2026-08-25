@@ -36,6 +36,7 @@ BikeStream/
 │   └── 03_retention.sql
 │
 ├── dashboard/                         # Phase 5 — Real-Time Dashboard
+│   ├── Dockerfile
 │   ├── app_realtime.R
 │   └── www/
 │       └── custom.css
@@ -147,6 +148,7 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_NUM_PARTITIONS: "5"
     healthcheck:
       test: kafka-topics --bootstrap-server localhost:9092 --list
       interval: 15s
@@ -214,6 +216,8 @@ services:
       - spark-master
       - kafka
       - timescaledb
+    volumes:
+      - spark_checkpoints:/tmp
     environment:
       SPARK_MASTER: spark://spark-master:7077
       KAFKA_BROKER: kafka:9092
@@ -224,8 +228,25 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     restart: unless-stopped
 
+  # --- Real-Time Dashboard (Shiny) ---
+  dashboard:
+    build: ./dashboard
+    container_name: bs-dashboard
+    ports:
+      - "3838:3838"
+    depends_on:
+      - timescaledb
+    environment:
+      POSTGRES_HOST: timescaledb
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    restart: unless-stopped
+
 volumes:
   pgdata:
+  spark_checkpoints:
 ```
 
 ## Step 1.4 — Create `Makefile` (convenience commands)
@@ -431,6 +452,12 @@ def poll_and_produce(producer: KafkaProducer, city: dict, info_cache: dict, topi
         producer.flush()
         logger.info(f"[{city['name']}] Produced {count} station records")
 
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 429:
+            logger.warning(f"[{city['name']}] Rate limited (429)! Triggering backoff.")
+            raise e
+        else:
+            logger.error(f"[{city['name']}] HTTP Error: {e}")
     except Exception as e:
         logger.error(f"[{city['name']}] Poll failed: {e}")
 
@@ -467,7 +494,13 @@ def main():
 
     logger.info(f"Starting producer loop: {len(config['cities'])} cities, every {interval}s")
 
+    backoff_time = 0
     while True:
+        if backoff_time > 0:
+            logger.info(f"Backing off for {backoff_time}s...")
+            time.sleep(backoff_time)
+            backoff_time = 0
+
         loop_start = time.time()
 
         # Refresh station info every 30 minutes
@@ -479,8 +512,13 @@ def main():
             last_info_refresh = time.time()
 
         # Poll all cities
-        for city in config["cities"]:
-            poll_and_produce(producer, city, info_caches.get(city["name"], {}), topic)
+        try:
+            for city in config["cities"]:
+                poll_and_produce(producer, city, info_caches.get(city["name"], {}), topic)
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 429:
+                backoff_time = 60 # wait 1 min if rate limited
+                continue
 
         # Sleep for remaining interval
         elapsed = time.time() - loop_start
@@ -1022,16 +1060,44 @@ ORDER BY time DESC;
 
 Use the same dark-mode premium CSS from the existing historical dashboard (Inter font, gradient cards, centered headers, etc).
 
-## Step 5.4 — Verify
+## Step 5.4 — `dashboard/Dockerfile`
 
-```r
-shiny::runApp("dashboard/app_realtime.R")
-# Map should show ~5,200 stations across 5 cities
-# Value boxes should update every 30 seconds
-# Alerts table should list empty/full stations
+```dockerfile
+# File: dashboard/Dockerfile
+FROM rocker/shiny:latest
+
+# Install system dependencies for RPostgres and others
+RUN apt-get update && apt-get install -y \
+    libpq-dev \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install required R packages
+RUN R -e "install.packages(c('bslib', 'bsicons', 'DBI', 'RPostgres', 'dplyr', 'ggplot2', 'plotly', 'leaflet', 'scales', 'lubridate'), repos='https://cloud.r-project.org/')"
+
+# Copy app and assets
+WORKDIR /srv/shiny-server/
+COPY app_realtime.R /srv/shiny-server/app.R
+COPY www /srv/shiny-server/www
+
+# Expose port
+EXPOSE 3838
+
+# Run
+CMD ["/usr/bin/shiny-server"]
 ```
 
-**✅ Deliverable: 4-tab real-time dashboard updating every 30 seconds from TimescaleDB.**
+## Step 5.5 — Verify
+
+```bash
+# Dashboard is now part of docker-compose
+docker compose up -d dashboard
+
+# Open in browser
+open http://localhost:3838
+```
+
+**✅ Deliverable: 4-tab real-time dashboard updating every 30 seconds from TimescaleDB (Dockerized).**
 
 ---
 
@@ -1084,8 +1150,8 @@ make db-status                       # Row counts growing per city
 # 6. Open Spark UI
 open http://localhost:8080            # Stream jobs running
 
-# 7. Launch dashboard
-Rscript -e 'shiny::runApp("dashboard/app_realtime.R")'
+# 7. Launch dashboard (now part of docker compose)
+open http://localhost:3838
 
 # 8. Run historical pipeline (one-time)
 cd historical && Rscript -e 'targets::tar_make()'
