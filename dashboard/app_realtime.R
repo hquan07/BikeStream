@@ -221,14 +221,14 @@ server <- function(input, output, session) {
     
     if(nrow(health_data) == 0) return(plotly_empty())
     
-    health_data$status <- factor(health_data$status, levels = c("EMPTY", "LOW", "HEALTHY", "FULL"))
+    health_data$status <- factor(health_data$status, levels = c("EMPTY", "LOW", "HEALTHY", "FULL", "UNKNOWN"))
     
     p1 <- ggplot(health_data, aes(x = bucket, y = count, fill = status)) +
       geom_area(stat = "identity", position = "fill", alpha = 0.85) +
-      scale_fill_manual(values = c("EMPTY" = "#dc3545", "LOW" = "#fd7e14", "HEALTHY" = "#20c997", "FULL" = "#0d6efd")) +
+      scale_fill_manual(values = c("EMPTY" = "#dc3545", "LOW" = "#fd7e14", "HEALTHY" = "#20c997", "FULL" = "#0d6efd", "UNKNOWN" = "#6c757d"), na.value = "#6c757d") +
       scale_y_continuous(labels = scales::percent) +
       theme_minimal() +
-      labs(x = "Time", y = "% of Stations", fill = "Status") +
+      labs(x = NULL, y = "% of Stations", fill = "") +
       theme(
         plot.background = element_rect(fill = "transparent", color = NA),
         panel.background = element_rect(fill = "transparent", color = NA),
@@ -237,7 +237,8 @@ server <- function(input, output, session) {
         legend.position = "bottom"
       )
     
-    ggplotly(p1)
+    ggplotly(p1) %>%
+      layout(legend = list(orientation = "h", x = 0.5, xanchor = "center", y = -0.15))
   })
   
   # Heatmap Plot
@@ -259,20 +260,22 @@ server <- function(input, output, session) {
     
     if(nrow(heatmap_data) == 0) return(plotly_empty())
     
-    p2 <- ggplot(heatmap_data, aes(x = bucket, y = city, fill = avg_fill)) +
-      geom_tile(color = "transparent") +
-      scale_fill_viridis_c(option = "inferno", labels = scales::percent, name = "Utilization") +
-      theme_minimal() +
-      labs(x = "Time", y = "") +
-      theme(
-        plot.background = element_rect(fill = "transparent", color = NA),
-        panel.background = element_rect(fill = "transparent", color = NA),
-        text = element_text(color = "white"),
-        axis.text = element_text(color = "gray"),
-        panel.grid = element_blank()
+    plot_ly(
+      data = heatmap_data,
+      x = ~bucket,
+      y = ~city,
+      z = ~avg_fill,
+      type = "heatmap",
+      colors = colorRamp(c("#000004", "#51127c", "#b63679", "#fb8861", "#fcffa4")),
+      colorbar = list(title = "Utilization", tickformat = ".0%")
+    ) %>%
+      layout(
+        xaxis = list(title = "", gridcolor = "transparent", zeroline = FALSE, tickfont = list(color = "gray")),
+        yaxis = list(title = "", gridcolor = "transparent", zeroline = FALSE, tickfont = list(color = "gray")),
+        paper_bgcolor = "transparent",
+        plot_bgcolor = "transparent",
+        font = list(color = "white")
       )
-    
-    ggplotly(p2)
   })
 }
 
