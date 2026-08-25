@@ -80,9 +80,16 @@ ui <- page_navbar(
   ),
   
   nav_panel("Trends",
-    card(
-      card_header("Hourly Utilization (%)"),
-      plotlyOutput("trend_plot", height = "500px")
+    layout_columns(
+      col_widths = c(12, 12),
+      card(
+        card_header("System Health Composition (Last 12 Hours)"),
+        plotlyOutput("health_trend_plot", height = "350px")
+      ),
+      card(
+        card_header("City Utilization Heatmap (Last 12 Hours)"),
+        plotlyOutput("heatmap_plot", height = "350px")
+      )
     )
   )
 )
@@ -194,39 +201,78 @@ server <- function(input, output, session) {
       mutate(last_seen = as.character(last_seen))
   })
   
-  # Trend Plot
-  output$trend_plot <- renderPlotly({
+  # Health Trend Plot
+  output$health_trend_plot <- renderPlotly({
     autoInvalidate()
     conn <- get_db_conn()
     on.exit(dbDisconnect(conn))
     
-    # We query the raw data for the last 12 hours since we might not have continuous aggs populated immediately
     query <- "
-      SELECT time_bucket('10 minutes', time) AS bucket,
+      SELECT time_bucket('15 minutes', time) AS bucket,
+             status,
+             COUNT(*) as count
+      FROM station_snapshots
+      WHERE time > NOW() - INTERVAL '12 hours'
+        AND status IS NOT NULL
+      GROUP BY bucket, status
+      ORDER BY bucket, status;
+    "
+    health_data <- dbGetQuery(conn, query)
+    
+    if(nrow(health_data) == 0) return(plotly_empty())
+    
+    health_data$status <- factor(health_data$status, levels = c("EMPTY", "LOW", "HEALTHY", "FULL"))
+    
+    p1 <- ggplot(health_data, aes(x = bucket, y = count, fill = status)) +
+      geom_area(stat = "identity", position = "fill", alpha = 0.85) +
+      scale_fill_manual(values = c("EMPTY" = "#dc3545", "LOW" = "#fd7e14", "HEALTHY" = "#20c997", "FULL" = "#0d6efd")) +
+      scale_y_continuous(labels = scales::percent) +
+      theme_minimal() +
+      labs(x = "Time", y = "% of Stations", fill = "Status") +
+      theme(
+        plot.background = element_rect(fill = "transparent", color = NA),
+        panel.background = element_rect(fill = "transparent", color = NA),
+        text = element_text(color = "white"),
+        axis.text = element_text(color = "gray"),
+        legend.position = "bottom"
+      )
+    
+    ggplotly(p1)
+  })
+  
+  # Heatmap Plot
+  output$heatmap_plot <- renderPlotly({
+    autoInvalidate()
+    conn <- get_db_conn()
+    on.exit(dbDisconnect(conn))
+    
+    query <- "
+      SELECT time_bucket('15 minutes', time) AS bucket,
           city,
           AVG(fill_ratio) AS avg_fill
       FROM station_snapshots
       WHERE time > NOW() - INTERVAL '12 hours'
       GROUP BY bucket, city
-      ORDER BY bucket;
+      ORDER BY bucket, city;
     "
-    trend_data <- dbGetQuery(conn, query)
+    heatmap_data <- dbGetQuery(conn, query)
     
-    if(nrow(trend_data) == 0) return(plotly_empty())
+    if(nrow(heatmap_data) == 0) return(plotly_empty())
     
-    p <- ggplot(trend_data, aes(x = bucket, y = avg_fill, color = city)) +
-      geom_line(linewidth = 1) +
-      scale_y_continuous(labels = scales::percent) +
+    p2 <- ggplot(heatmap_data, aes(x = bucket, y = city, fill = avg_fill)) +
+      geom_tile(color = "transparent") +
+      scale_fill_viridis_c(option = "inferno", labels = scales::percent, name = "Utilization") +
       theme_minimal() +
-      labs(x = "Time", y = "Average Fill Ratio") +
+      labs(x = "Time", y = "") +
       theme(
         plot.background = element_rect(fill = "transparent", color = NA),
         panel.background = element_rect(fill = "transparent", color = NA),
         text = element_text(color = "white"),
-        axis.text = element_text(color = "gray")
+        axis.text = element_text(color = "gray"),
+        panel.grid = element_blank()
       )
     
-    ggplotly(p)
+    ggplotly(p2)
   })
 }
 
