@@ -1,10 +1,14 @@
 # File: dashboard/Dockerfile
 FROM rocker/shiny:latest
 
-# Install system dependencies for RPostgres and others
+# Install system dependencies for RPostgres and spatial packages
 RUN apt-get update && apt-get install -y \
     libpq-dev \
     libssl-dev \
+    libgdal-dev \
+    libudunits2-dev \
+    libgeos-dev \
+    libproj-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install required R packages
