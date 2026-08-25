@@ -25,4 +25,4 @@ COPY www /srv/shiny-server/www
 EXPOSE 3838
 
 # Run
-CMD ["/usr/bin/shiny-server"]
+CMD printenv > /srv/shiny-server/.Renviron && /usr/bin/shiny-server
