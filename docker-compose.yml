@@ -139,12 +139,12 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     restart: unless-stopped
 
-  # --- Real-Time Dashboard (Shiny) ---
+  # --- Real-Time Dashboard (Streamlit) ---
   dashboard:
     build: ./dashboard
     container_name: bs-dashboard
     ports:
-      - "3838:3838"
+      - "8501:8501"
     depends_on:
       - timescaledb
     environment:
