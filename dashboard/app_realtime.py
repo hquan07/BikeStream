@@ -3,8 +3,7 @@ import pandas as pd
 import psycopg2
 import plotly.express as px
 import plotly.graph_objects as go
-import folium
-from streamlit_folium import st_folium
+import pydeck as pdk
 import requests
 from datetime import datetime, timedelta
 import os
@@ -243,6 +242,14 @@ def get_alerts():
     """
     return pd.read_sql(query, conn)
 
+@st.cache_data(ttl=300)
+def get_osrm_route(coords):
+    osrm_url = f"https://router.project-osrm.org/route/v1/driving/{coords}?overview=full&geometries=geojson"
+    try:
+        return requests.get(osrm_url, timeout=5).json()
+    except Exception:
+        return None
+
 def get_routing_stations(city):
     q_full = f"""
       SELECT DISTINCT ON (station_id)
@@ -276,20 +283,34 @@ with tab1:
     col_map, col_stats = st.columns([3, 1])
     
     with col_map:
-        m = folium.Map(location=[41.88, -87.63], zoom_start=4, tiles="https://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}", attr="Esri")
         if not df_stations.empty:
-            color_map = {"EMPTY": "red", "LOW": "orange", "HEALTHY": "green", "FULL": "blue"}
-            for _, row in df_stations.iterrows():
-                folium.CircleMarker(
-                    location=[row['lat'], row['lon']],
-                    radius=6,
-                    color=color_map.get(row['status'], "gray"),
-                    fill=True,
-                    fill_opacity=0.9,
-                    popup=f"<b>{row['station_name']}</b><br>Status: {row['status']}<br>Bikes: {row['num_bikes_available']}<br>Docks: {row['num_docks_available']}",
-                    tooltip=f"🚲 {row['station_name']} ({row['num_bikes_available']} bikes)"
-                ).add_to(m)
-        st_folium(m, use_container_width=True, height=600, returned_objects=[])
+            color_map = {"EMPTY": [220, 53, 69], "LOW": [253, 126, 20], "HEALTHY": [32, 201, 151], "FULL": [13, 110, 253]}
+            df_stations['color'] = df_stations['status'].map(color_map).fillna(pd.Series([[128, 128, 128]] * len(df_stations)))
+            
+            layer = pdk.Layer(
+                "ScatterplotLayer",
+                df_stations,
+                get_position=["lon", "lat"],
+                get_color="color",
+                get_radius=200,
+                pickable=True,
+                opacity=0.8,
+                filled=True,
+            )
+            view_state = pdk.ViewState(
+                latitude=df_stations['lat'].mean(),
+                longitude=df_stations['lon'].mean(),
+                zoom=10,
+                pitch=0,
+            )
+            st.pydeck_chart(pdk.Deck(
+                map_style="mapbox://styles/mapbox/dark-v10",
+                layers=[layer],
+                initial_view_state=view_state,
+                tooltip={"html": "<b>{station_name}</b><br/>Status: {status}<br/>Bikes: {num_bikes_available}<br/>Docks: {num_docks_available}"}
+            ), use_container_width=True)
+        else:
+            st.info("No data to display on map.")
         
     with col_stats:
         st.markdown("### 📊 Quick Insights")
@@ -368,22 +389,49 @@ with tab5:
                 st.dataframe(df_route[['action', 'station_name', 'num_bikes_available']])
                 
                 coords = ";".join([f"{lon},{lat}" for lon, lat in zip(df_route['lon'], df_route['lat'])])
-                osrm_url = f"https://router.project-osrm.org/route/v1/driving/{coords}?overview=full&geometries=geojson"
-                try:
-                    resp = requests.get(osrm_url).json()
-                    if resp.get('code') == 'Ok':
-                        route_geom = resp['routes'][0]['geometry']
-                        distance = round(resp['routes'][0]['distance'] / 1000, 1)
-                        duration = round(resp['routes'][0]['duration'] / 60, 0)
-                        st.success(f"Route calculated! {distance} km, {duration} mins.")
-                        
-                        m_route = folium.Map(location=[df_route['lat'].mean(), df_route['lon'].mean()], zoom_start=12, tiles="https://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}", attr="Esri")
-                        folium.GeoJson(route_geom, name="Route").add_to(m_route)
-                        for _, r in df_route.iterrows():
-                            c = "#0d6efd" if r['action'] == "PICKUP" else "#dc3545"
-                            folium.Marker([r['lat'], r['lon']], icon=folium.Icon(color="blue" if r['action'] == "PICKUP" else "red")).add_to(m_route)
-                        with col2:
-                            st.subheader("Fleet Dispatch Route")
-                            st_folium(m_route, width=800, height=500, returned_objects=[])
-                except Exception as e:
-                    st.error(f"Routing failed: {e}")
+                resp = get_osrm_route(coords)
+                if resp and resp.get('code') == 'Ok':
+                    route_geom = resp['routes'][0]['geometry']
+                    distance = round(resp['routes'][0]['distance'] / 1000, 1)
+                    duration = round(resp['routes'][0]['duration'] / 60, 0)
+                    st.success(f"Route calculated! {distance} km, {duration} mins.")
+                    
+                    route_data = pd.DataFrame({"path": [route_geom['coordinates']], "color": [[0, 212, 255]]})
+                    path_layer = pdk.Layer(
+                        "PathLayer",
+                        route_data,
+                        get_path="path",
+                        get_color="color",
+                        width_scale=20,
+                        width_min_pixels=5,
+                        get_width=5
+                    )
+                    
+                    df_route['color'] = df_route['action'].apply(lambda x: [13, 110, 253] if x == 'PICKUP' else [220, 53, 69])
+                    point_layer = pdk.Layer(
+                        "ScatterplotLayer",
+                        df_route,
+                        get_position=["lon", "lat"],
+                        get_color="color",
+                        get_radius=250,
+                        pickable=True,
+                        filled=True,
+                    )
+                    
+                    view_state = pdk.ViewState(
+                        latitude=df_route['lat'].mean(),
+                        longitude=df_route['lon'].mean(),
+                        zoom=11,
+                        pitch=0,
+                    )
+                    
+                    with col2:
+                        st.subheader("Fleet Dispatch Route")
+                        st.pydeck_chart(pdk.Deck(
+                            map_style="mapbox://styles/mapbox/dark-v10",
+                            layers=[path_layer, point_layer],
+                            initial_view_state=view_state,
+                            tooltip={"html": "<b>{station_name}</b><br/>{action}"}
+                        ), use_container_width=True)
+                else:
+                    st.error("Routing API failed to return a route.")
