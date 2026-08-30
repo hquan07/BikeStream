@@ -29,7 +29,7 @@ st.markdown("""
 }
 
 /* Metric Cards (Value Boxes) */
-div[data-testid="metric-container"] {
+div[data-testid="stMetric"] {
     background: rgba(25, 25, 35, 0.4) !important;
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
     border-radius: 15px !important;
@@ -40,7 +40,7 @@ div[data-testid="metric-container"] {
     transition: all 0.3s ease !important;
 }
 
-div[data-testid="metric-container"]:hover {
+div[data-testid="stMetric"]:hover {
     transform: translateY(-5px) !important;
     box-shadow: 0 0 25px rgba(0, 212, 255, 0.4) !important;
     border-color: rgba(0, 212, 255, 0.5) !important;
@@ -54,7 +54,7 @@ div[data-testid="metric-container"]:hover {
 }
 
 /* Target the specific alert metric by its label using nth-child or if we can */
-div[data-testid="metric-container"]:nth-of-type(4) {
+div[data-testid="stMetric"]:nth-of-type(4) {
     animation: pulse 2s infinite !important;
     border-color: rgba(220, 53, 69, 0.5) !important;
 }
