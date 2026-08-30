@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-GBFS Producer — Polls 5 cities' bike-share APIs and publishes to Kafka.
+GBFS Producer — Polls 5 cities' bike-share APIs and publishes to Kafka
+using Avro serialization with Confluent Schema Registry.
 
-Each message on topic 'station_status' is a JSON object with:
-  city, station_id, timestamp, num_bikes_available, num_docks_available,
-  num_ebikes_available, is_renting, is_returning, station_name, lat, lon, capacity
+Each message on topic 'station_status' is an Avro record conforming to
+the GbfsStationStatus schema registered in Schema Registry.
 """
 
 import os
@@ -15,8 +15,14 @@ from datetime import datetime, timezone
 
 import requests
 import yaml
-from kafka import KafkaProducer
-from kafka.errors import NoBrokersAvailable
+from confluent_kafka import Producer
+from confluent_kafka.serialization import (
+    SerializationContext,
+    MessageField,
+    StringSerializer,
+)
+from confluent_kafka.schema_registry import SchemaRegistryClient
+from confluent_kafka.schema_registry.avro import AvroSerializer
 
 # --- Logging ---
 logging.basicConfig(
@@ -34,6 +40,16 @@ def load_config(path="config.yaml"):
         raw = raw.replace(f"${{{key}}}", val)
         raw = raw.replace(f"${{{key}:-{val}}}", val)
     return yaml.safe_load(raw)
+
+# --- Load Avro Schema ---
+def load_avro_schema(path="schemas/gbfs_station_status.avsc"):
+    with open(path) as f:
+        return f.read()
+
+# --- Helper: dict to Avro record ---
+def station_to_dict(station, ctx):
+    """Convert station dict to Avro-compatible dict."""
+    return station
 
 # --- Fetch station info (cached — changes rarely) ---
 def fetch_station_info(url: str) -> dict:
@@ -57,9 +73,15 @@ def fetch_station_info(url: str) -> dict:
         logger.error(f"Failed to fetch station info from {url}: {e}")
         return {}
 
+# --- Delivery callback ---
+def delivery_report(err, msg):
+    if err is not None:
+        logger.error(f"Delivery failed: {err}")
+
 # --- Fetch station status and produce to Kafka ---
-def poll_and_produce(producer: KafkaProducer, city: dict, info_cache: dict, topic: str):
-    """Poll one city's station_status and produce each station as a Kafka message."""
+def poll_and_produce(producer: Producer, avro_serializer: AvroSerializer,
+                     city: dict, info_cache: dict, topic: str):
+    """Poll one city's station_status and produce each station as an Avro message."""
     try:
         resp = requests.get(city["status_url"], timeout=30)
         resp.raise_for_status()
@@ -84,18 +106,26 @@ def poll_and_produce(producer: KafkaProducer, city: dict, info_cache: dict, topi
                 "is_renting": bool(s.get("is_renting", 0)),
                 "is_returning": bool(s.get("is_returning", 0)),
                 "station_name": info.get("station_name", "Unknown"),
-                "lat": info.get("lat", 0.0),
-                "lon": info.get("lon", 0.0),
-                "capacity": info.get("capacity", 0),
+                "lat": float(info.get("lat", 0.0)),
+                "lon": float(info.get("lon", 0.0)),
+                "capacity": int(info.get("capacity", 0)),
             }
 
             # Key = city:station_id for partition affinity
-            key = f"{city['name']}:{sid}".encode("utf-8")
-            producer.send(topic, key=key, value=message)
+            key = f"{city['name']}:{sid}"
+            producer.produce(
+                topic=topic,
+                key=key,
+                value=avro_serializer(
+                    message,
+                    SerializationContext(topic, MessageField.VALUE)
+                ),
+                on_delivery=delivery_report,
+            )
             count += 1
 
         producer.flush()
-        logger.info(f"[{city['name']}] Produced {count} station records")
+        logger.info(f"[{city['name']}] Produced {count} Avro station records")
 
     except requests.exceptions.HTTPError as e:
         if e.response.status_code == 429:
@@ -112,20 +142,34 @@ def main():
     broker = config["kafka"]["bootstrap_servers"]
     topic = config["kafka"]["topic"]
     interval = config["poll_interval_seconds"]
+    schema_registry_url = os.getenv("SCHEMA_REGISTRY_URL", "http://schema-registry:8081")
 
-    # Wait for Kafka to be ready
+    # --- Schema Registry Client ---
+    schema_registry_conf = {"url": schema_registry_url}
+    schema_registry_client = SchemaRegistryClient(schema_registry_conf)
+
+    # --- Avro Serializer ---
+    avro_schema_str = load_avro_schema()
+    avro_serializer = AvroSerializer(
+        schema_registry_client,
+        avro_schema_str,
+        station_to_dict,
+    )
+
+    # Wait for Kafka & Schema Registry to be ready
     producer = None
     for attempt in range(30):
         try:
-            producer = KafkaProducer(
-                bootstrap_servers=broker,
-                value_serializer=lambda v: json.dumps(v).encode("utf-8"),
-                acks="all",
-                retries=3,
-            )
+            producer = Producer({
+                "bootstrap.servers": broker,
+                "acks": "all",
+                "retries": 3,
+            })
+            # Test connectivity
+            producer.list_topics(timeout=5)
             logger.info(f"Connected to Kafka at {broker}")
             break
-        except NoBrokersAvailable:
+        except Exception:
             logger.warning(f"Kafka not ready (attempt {attempt+1}/30), retrying in 5s...")
             time.sleep(5)
 
@@ -159,10 +203,10 @@ def main():
         # Poll all cities
         try:
             for city in config["cities"]:
-                poll_and_produce(producer, city, info_caches.get(city["name"], {}), topic)
+                poll_and_produce(producer, avro_serializer, city, info_caches.get(city["name"], {}), topic)
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 429:
-                backoff_time = 60 # wait 1 min if rate limited
+                backoff_time = 60  # wait 1 min if rate limited
                 continue
 
         # Sleep for remaining interval

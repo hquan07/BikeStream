@@ -1,0 +1,22 @@
+{
+  "type": "record",
+  "name": "GbfsStationStatus",
+  "namespace": "com.bikestream",
+  "doc": "GBFS station status snapshot — enriched with station info.",
+  "fields": [
+    {"name": "city",                   "type": "string",  "doc": "City identifier (e.g. chicago, new_york)"},
+    {"name": "system",                 "type": "string",  "doc": "Bike-share system name (e.g. divvy, citibike)"},
+    {"name": "station_id",             "type": "string",  "doc": "Unique station identifier within the system"},
+    {"name": "timestamp",              "type": "string",  "doc": "ISO-8601 UTC timestamp of the snapshot"},
+    {"name": "num_bikes_available",    "type": "int",     "doc": "Number of bikes available at the station"},
+    {"name": "num_docks_available",    "type": "int",     "doc": "Number of empty docks at the station"},
+    {"name": "num_ebikes_available",   "type": "int",     "doc": "Number of e-bikes available"},
+    {"name": "num_scooters_available", "type": "int",     "doc": "Number of scooters available"},
+    {"name": "is_renting",            "type": "boolean",  "doc": "True if station is currently renting bikes"},
+    {"name": "is_returning",          "type": "boolean",  "doc": "True if station is currently accepting returns"},
+    {"name": "station_name",          "type": "string",   "doc": "Human-readable station name"},
+    {"name": "lat",                   "type": "double",   "doc": "Station latitude (WGS84)"},
+    {"name": "lon",                   "type": "double",   "doc": "Station longitude (WGS84)"},
+    {"name": "capacity",              "type": "int",      "doc": "Total number of docks at the station"}
+  ]
+}
