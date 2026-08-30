@@ -112,7 +112,7 @@ def get_kpi_data():
     """
     df = pd.read_sql(query, conn)
     if df.empty:
-        return pd.DataFrame({"total_stations":[0], "total_bikes":[0], "total_docks":[0], "alert_count":[0]})
+        return pd.DataFrame({"city": ["No Data"], "total_stations":[0], "total_bikes":[0], "total_docks":[0], "alert_count":[0], "avg_utilization":[0.0]})
     return df
 
 def get_health_trend():
