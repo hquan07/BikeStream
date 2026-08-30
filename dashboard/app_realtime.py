@@ -21,6 +21,11 @@ st.set_page_config(
 # --- Custom Glassmorphism CSS ---
 st.markdown("""
 <style>
+/* Hide Default Streamlit Elements for a cleaner app look */
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+header {visibility: hidden;}
+
 /* Global Background */
 .stApp {
     background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%) !important;
@@ -28,9 +33,49 @@ st.markdown("""
     font-family: 'Outfit', sans-serif;
 }
 
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+    70% { box-shadow: 0 0 0 15px rgba(220, 53, 69, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+}
+
+/* Apply fade in to the main container */
+.main .block-container {
+    animation: fadeIn 1s ease;
+}
+
+/* Main Title Gradient & Center */
+h1 {
+    text-align: center !important;
+    background: -webkit-linear-gradient(45deg, #00d2ff, #3a7bd5);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 800;
+    font-size: 3.5rem !important;
+    margin-bottom: 30px;
+    animation: slideDown 1s ease;
+}
+
+/* Headings */
+h2, h3 {
+    color: #ffffff !important;
+    text-align: center;
+    margin-top: 10px;
+    margin-bottom: 20px;
+}
+
 /* Metric Cards (Value Boxes) */
 div[data-testid="stMetric"] {
-    background: rgba(25, 25, 35, 0.4) !important;
+    background: rgba(25, 25, 35, 0.5) !important;
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
     border-radius: 15px !important;
     padding: 20px !important;
@@ -38,19 +83,16 @@ div[data-testid="stMetric"] {
     -webkit-backdrop-filter: blur(12px) !important;
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3) !important;
     transition: all 0.3s ease !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
 }
 
 div[data-testid="stMetric"]:hover {
     transform: translateY(-5px) !important;
-    box-shadow: 0 0 25px rgba(0, 212, 255, 0.4) !important;
-    border-color: rgba(0, 212, 255, 0.5) !important;
-}
-
-/* Pulse effect for Alert Metric */
-@keyframes pulse {
-    0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
-    70% { box-shadow: 0 0 0 15px rgba(220, 53, 69, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+    box-shadow: 0 0 25px rgba(0, 212, 255, 0.5) !important;
+    border-color: rgba(0, 212, 255, 0.7) !important;
 }
 
 /* Target the specific alert metric by its label using nth-child or if we can */
@@ -59,15 +101,63 @@ div[data-testid="stMetric"]:nth-of-type(4) {
     border-color: rgba(220, 53, 69, 0.5) !important;
 }
 
-/* Headings */
-h1, h2, h3 {
-    color: #ffffff !important;
+/* Center Metric Labels & Values */
+div[data-testid="stMetricValue"] {
+    text-align: center !important;
+    justify-content: center !important;
+    font-size: 2.8rem !important;
+    font-weight: 700 !important;
+    background: -webkit-linear-gradient(45deg, #00d2ff, #3a7bd5);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+div[data-testid="stMetricLabel"] {
+    text-align: center !important;
+    justify-content: center !important;
+    font-size: 1.2rem !important;
+    color: #a0a0b0 !important;
+}
+div[data-testid="stMetricDelta"] {
+    justify-content: center !important;
 }
 
-/* Dataframe styling */
-.dataframe {
-    background: rgba(25, 25, 35, 0.4) !important;
+/* Sleek Tabs */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 15px;
+    background-color: rgba(25, 25, 35, 0.4);
+    padding: 10px;
+    border-radius: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(12px);
+    justify-content: center;
+}
+.stTabs [data-baseweb="tab"] {
+    height: 45px;
+    white-space: pre-wrap;
+    background-color: transparent;
+    border-radius: 10px;
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 1.1rem;
+    padding: 0 20px;
+    transition: all 0.3s ease;
+}
+.stTabs [aria-selected="true"] {
+    background-color: rgba(0, 212, 255, 0.3) !important;
+    border: 1px solid rgba(0, 212, 255, 0.5);
     color: white !important;
+    box-shadow: 0 0 15px rgba(0, 212, 255, 0.4);
+}
+.stTabs [data-baseweb="tab"]:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Dataframe glassmorphism wrapper */
+[data-testid="stDataFrame"] {
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 </style>
 """, unsafe_allow_html=True)
