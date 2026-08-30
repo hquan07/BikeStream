@@ -69,3 +69,24 @@ SELECT create_hypertable('system_metrics', 'time',
     chunk_time_interval => INTERVAL '1 day',
     if_not_exists => TRUE
 );
+
+-- ==========================================
+-- Dead Letter Queue: Failed/malformed records
+-- ==========================================
+CREATE TABLE IF NOT EXISTS dlq_events (
+    time                TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    source_topic        TEXT,
+    source_partition    INTEGER,
+    source_offset       BIGINT,
+    raw_payload         TEXT,
+    error_type          TEXT            NOT NULL,
+    error_message       TEXT
+);
+
+SELECT create_hypertable('dlq_events', 'time',
+    chunk_time_interval => INTERVAL '1 day',
+    if_not_exists => TRUE
+);
+
+CREATE INDEX IF NOT EXISTS idx_dlq_error_type
+    ON dlq_events (error_type, time DESC);
