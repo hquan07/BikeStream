@@ -282,17 +282,25 @@ with tab1:
             for _, row in df_stations.iterrows():
                 folium.CircleMarker(
                     location=[row['lat'], row['lon']],
-                    radius=4,
+                    radius=6,
                     color=color_map.get(row['status'], "gray"),
                     fill=True,
-                    fill_opacity=0.8,
-                    popup=f"<b>{row['station_name']}</b><br>Status: {row['status']}<br>Bikes: {row['num_bikes_available']}<br>Docks: {row['num_docks_available']}"
+                    fill_opacity=0.9,
+                    popup=f"<b>{row['station_name']}</b><br>Status: {row['status']}<br>Bikes: {row['num_bikes_available']}<br>Docks: {row['num_docks_available']}",
+                    tooltip=f"🚲 {row['station_name']} ({row['num_bikes_available']} bikes)"
                 ).add_to(m)
         st_folium(m, use_container_width=True, height=600, returned_objects=[])
         
     with col_stats:
         st.markdown("### 📊 Quick Insights")
         if not df_stations.empty:
+            st.markdown("#### 🗺️ Map Legend")
+            st.markdown("🔴 **EMPTY:** Hết xe đạp (Cần điều phối)")
+            st.markdown("🟠 **LOW:** Sắp hết xe (1-3 xe)")
+            st.markdown("🟢 **HEALTHY:** Trạng thái tốt (Đủ xe)")
+            st.markdown("🔵 **FULL:** Đầy xe (Hết chỗ đỗ)")
+            st.markdown("---")
+            
             total_live = len(df_stations)
             empty_stations = len(df_stations[df_stations['status'] == 'EMPTY'])
             healthy_stations = len(df_stations[df_stations['status'] == 'HEALTHY'])
