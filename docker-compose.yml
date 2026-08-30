@@ -62,7 +62,7 @@ services:
 
   # --- TimescaleDB (PostgreSQL + TimescaleDB extension) ---
   timescaledb:
-    image: timescale/timescaledb:latest-pg16
+    image: timescale/timescaledb-ha:pg16
     container_name: bs-timescaledb
     ports:
       - "5433:5432"
@@ -169,6 +169,19 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - ml_models:/app/models
+    restart: unless-stopped
+
+  # --- pg_tileserv (Vector Tiles for Maps) ---
+  pg-tileserv:
+    image: pramsey/pg_tileserv:latest
+    container_name: bs-pg-tileserv
+    ports:
+      - "7800:7800"
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@timescaledb:5432/${POSTGRES_DB}
     restart: unless-stopped
 
 volumes:

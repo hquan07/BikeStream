@@ -1,5 +1,7 @@
 -- Enable TimescaleDB extension
 CREATE EXTENSION IF NOT EXISTS timescaledb;
+-- Enable PostGIS extension (for vector tiles)
+CREATE EXTENSION IF NOT EXISTS postgis;
 
 -- ==========================================
 -- Dimension: Station master data
@@ -145,3 +147,26 @@ SELECT create_hypertable('weather_snapshots', 'time',
 
 CREATE INDEX IF NOT EXISTS idx_weather_city_time
     ON weather_snapshots (city, time DESC);
+
+-- ==========================================
+-- Spatial View for pg_tileserv (Vector Tiles)
+-- ==========================================
+CREATE OR REPLACE VIEW public.spatial_station_status AS
+SELECT DISTINCT ON (city, station_id)
+    city,
+    station_id,
+    station_name,
+    num_bikes_available,
+    num_docks_available,
+    capacity,
+    fill_ratio,
+    status,
+    needs_rebalancing,
+    time,
+    ST_SetSRID(ST_MakePoint(lon, lat), 4326)::geometry(Point, 4326) AS geom
+FROM station_snapshots
+WHERE lat IS NOT NULL AND lon IS NOT NULL
+  AND lat != 0 AND lon != 0
+ORDER BY city, station_id, time DESC;
+
+COMMENT ON VIEW public.spatial_station_status IS 'Latest station status with PostGIS geometry for pg_tileserv vector tile serving';
