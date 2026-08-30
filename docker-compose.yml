@@ -154,6 +154,23 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     restart: unless-stopped
 
+  # --- ML Predictor (XGBoost) ---
+  ml-predictor:
+    build: ./ml-predictor
+    container_name: bs-ml-predictor
+    depends_on:
+      - timescaledb
+    environment:
+      POSTGRES_HOST: timescaledb
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - ml_models:/app/models
+    restart: unless-stopped
+
 volumes:
   pgdata:
   spark_checkpoints:
+  ml_models:

@@ -90,3 +90,31 @@ SELECT create_hypertable('dlq_events', 'time',
 
 CREATE INDEX IF NOT EXISTS idx_dlq_error_type
     ON dlq_events (error_type, time DESC);
+
+-- ==========================================
+-- ML: Station fill ratio predictions
+-- ==========================================
+CREATE TABLE IF NOT EXISTS station_predictions (
+    prediction_time             TIMESTAMPTZ     NOT NULL,
+    target_time                 TIMESTAMPTZ     NOT NULL,
+    city                        TEXT            NOT NULL,
+    station_id                  TEXT            NOT NULL,
+    station_name                TEXT,
+    lat                         DOUBLE PRECISION,
+    lon                         DOUBLE PRECISION,
+    current_fill_ratio          REAL,
+    predicted_fill_ratio        REAL,
+    predicted_status            TEXT,
+    needs_rebalancing_predicted BOOLEAN
+);
+
+SELECT create_hypertable('station_predictions', 'prediction_time',
+    chunk_time_interval => INTERVAL '1 day',
+    if_not_exists => TRUE
+);
+
+CREATE INDEX IF NOT EXISTS idx_sp_city_target
+    ON station_predictions (city, target_time DESC);
+CREATE INDEX IF NOT EXISTS idx_sp_rebalancing
+    ON station_predictions (needs_rebalancing_predicted, city, target_time DESC)
+    WHERE needs_rebalancing_predicted = TRUE;
