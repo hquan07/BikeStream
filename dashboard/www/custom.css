@@ -1,66 +1,257 @@
-/* dashboard/www/custom.css */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap');
+
+/* --- 1. Global Styling & Background --- */
 body {
-    background-color: #121212;
+    background: radial-gradient(circle at 15% 50%, #1a103c, #0d0914 40%, #050508 100%);
+    background-attachment: fixed;
     color: #e0e0e0;
-    font-family: 'Inter', sans-serif;
+    font-family: 'Outfit', sans-serif;
+    min-height: 100vh;
 }
 
+/* Custom Webkit Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(0, 212, 255, 0.4);
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 212, 255, 0.8);
+}
+
+/* --- 2. Glassmorphism Cards --- */
 .card {
-    background: linear-gradient(145deg, #1e1e1e, #2a2a2a);
-    border: 1px solid #333;
-    box-shadow: 4px 4px 10px rgba(0,0,0,0.5);
-    border-radius: 12px;
+    background: rgba(25, 25, 35, 0.4) !important;
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    border-radius: 16px !important;
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    animation: fadeInUp 0.8s ease-out forwards;
+}
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px 0 rgba(0, 212, 255, 0.15);
 }
 
 .card-header {
-    background-color: transparent;
-    border-bottom: 1px solid #333;
+    background: linear-gradient(90deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 100%) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
     font-weight: 600;
+    font-size: 1.1rem;
     color: #00d4ff;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    padding: 1rem 1.5rem;
 }
 
-/* Value box styling */
+/* --- 3. Value Boxes (KPIs) --- */
 .bslib-value-box {
-    background: linear-gradient(135deg, #2c3e50, #000000);
-    border: 1px solid #444;
-    color: #fff;
+    background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(0, 0, 0, 0.4)) !important;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(0, 212, 255, 0.2) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.bslib-value-box::before {
+    content: '';
+    position: absolute;
+    top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%);
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+}
+.bslib-value-box:hover::before {
+    opacity: 1;
+}
+.bslib-value-box:hover {
+    transform: scale(1.02);
+    border-color: rgba(0, 212, 255, 0.6) !important;
+    box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
 }
 
 .bslib-value-box.bg-danger {
-    background: linear-gradient(135deg, #7b1fa2, #e53935);
+    background: linear-gradient(135deg, rgba(229, 57, 53, 0.15), rgba(0, 0, 0, 0.5)) !important;
+    border: 1px solid rgba(229, 57, 53, 0.4) !important;
+    animation: dangerPulse 2s infinite;
+}
+.bslib-value-box.bg-danger:hover {
+    box-shadow: 0 0 25px rgba(229, 57, 53, 0.5);
+    border-color: rgba(229, 57, 53, 0.8) !important;
 }
 
 .bslib-value-box .value-box-title {
-    font-size: 1.1rem;
-    opacity: 0.8;
+    font-size: 1.05rem;
+    font-weight: 400;
+    color: #a0aab5;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
-
 .bslib-value-box .value-box-value {
-    font-size: 2.5rem;
+    font-size: 2.8rem;
     font-weight: 700;
-    color: #00d4ff;
+    color: #ffffff;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.5);
 }
 
-.bslib-value-box.bg-danger .value-box-value {
-    color: #fff;
-}
-
-/* Table styling */
+/* --- 4. Tables --- */
 table {
     width: 100%;
-    color: #fff;
+    color: #d1d5db;
+    border-collapse: separate;
+    border-spacing: 0 8px;
+    margin-top: -8px;
 }
-
 th {
-    border-bottom: 2px solid #00d4ff;
-    padding: 8px;
+    border-bottom: 2px solid rgba(0, 212, 255, 0.3);
+    padding: 12px;
+    font-weight: 600;
+    color: #00d4ff;
+    text-transform: uppercase;
+    font-size: 0.9rem;
+    letter-spacing: 0.5px;
 }
-
 td {
-    border-bottom: 1px solid #333;
-    padding: 8px;
+    background: rgba(255, 255, 255, 0.02);
+    border-top: 1px solid rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    padding: 12px;
+    transition: background 0.2s;
+}
+td:first-child {
+    border-left: 1px solid rgba(255, 255, 255, 0.03);
+    border-top-left-radius: 8px;
+    border-bottom-left-radius: 8px;
+}
+td:last-child {
+    border-right: 1px solid rgba(255, 255, 255, 0.03);
+    border-top-right-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+tr:hover td {
+    background: rgba(0, 212, 255, 0.08);
+    color: #fff;
+    cursor: default;
 }
 
-tr:hover td {
-    background-color: #222;
+/* --- 5. Navbar & UI Controls --- */
+.navbar {
+    background: rgba(15, 15, 20, 0.85) !important;
+    -webkit-backdrop-filter: blur(15px) !important;
+    backdrop-filter: blur(15px) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    padding: 0.8rem 2rem !important;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5) !important;
+}
+/* Absolute positioning to guarantee exact center on desktop */
+@media (min-width: 768px) {
+    .navbar {
+        position: relative !important;
+    }
+    .navbar-collapse {
+        position: absolute !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        display: flex !important;
+        justify-content: center !important;
+        width: max-content !important;
+    }
+    .navbar-nav {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 15px !important;
+    }
+}
+.navbar-brand {
+    font-weight: 800 !important;
+    font-size: 1.5rem !important;
+    background: -webkit-linear-gradient(45deg, #00d4ff, #b53cff) !important;
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    letter-spacing: 1px !important;
+}
+.nav-link {
+    font-weight: 600 !important;
+    letter-spacing: 1px !important;
+    text-transform: uppercase !important;
+    font-size: 0.85rem !important;
+    color: #8b9bb4 !important;
+    transition: color 0.3s ease, border-bottom 0.3s ease !important;
+    margin-right: 15px !important;
+    padding-bottom: 5px !important;
+}
+.nav-link:hover {
+    color: #ffffff !important;
+}
+.nav-link.active, .nav-item.active > .nav-link {
+    color: #00d4ff !important;
+    border-bottom: 2px solid #00d4ff !important;
+}
+
+.btn-primary {
+    background: linear-gradient(45deg, #00d4ff, #007bff);
+    border: none;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border-radius: 8px;
+    padding: 10px 20px;
+    transition: all 0.3s;
+    box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
+}
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 212, 255, 0.5);
+    background: linear-gradient(45deg, #00ebff, #009dff);
+}
+.form-select, .form-control {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: #fff !important;
+    border-radius: 8px;
+}
+.form-select:focus, .form-control:focus {
+    box-shadow: 0 0 0 0.25rem rgba(0, 212, 255, 0.25) !important;
+    border-color: #00d4ff !important;
+}
+
+/* --- 6. Maps & Plots --- */
+.leaflet-container {
+    border-radius: 12px;
+    background: #121212 !important;
+}
+
+/* --- 7. Animations --- */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes dangerPulse {
+    0% { box-shadow: 0 0 0 0 rgba(229, 57, 53, 0.4); }
+    70% { box-shadow: 0 0 0 15px rgba(229, 57, 53, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(229, 57, 53, 0); }
 }

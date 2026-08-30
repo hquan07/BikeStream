@@ -1,29 +1,22 @@
 # File: dashboard/Dockerfile
-FROM rocker/shiny:latest
+FROM python:3.10-slim
 
-# Install system dependencies for RPostgres and spatial packages
+WORKDIR /app
+
+# Install system dependencies for psycopg2 and building Python packages
 RUN apt-get update && apt-get install -y \
     libpq-dev \
-    libssl-dev \
-    libgdal-dev \
-    libudunits2-dev \
-    libgeos-dev \
-    libproj-dev \
-    cmake \
-    libabsl-dev \
-    libcurl4-openssl-dev \
+    gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# Install required R packages
-RUN R -e "install.packages(c('bslib', 'bsicons', 'DBI', 'RPostgres', 'dplyr', 'ggplot2', 'plotly', 'leaflet', 'scales', 'lubridate', 'httr', 'jsonlite'), repos='https://cloud.r-project.org/')"
+# Copy requirements and install
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy app and assets
-WORKDIR /srv/shiny-server/
-COPY app_realtime.R /srv/shiny-server/app.R
-COPY www /srv/shiny-server/www
+# Copy application and assets
+COPY app_realtime.py .
+COPY www/ ./www/
 
-# Expose port
-EXPOSE 3838
+EXPOSE 8501
 
-# Run
-CMD printenv > /srv/shiny-server/.Renviron && /usr/bin/shiny-server
+CMD ["streamlit", "run", "app_realtime.py", "--server.port=8501", "--server.address=0.0.0.0"]
