@@ -162,7 +162,7 @@ server <- function(input, output, session) {
   # Map Output
   output$live_map <- renderLeaflet({
     data <- live_stations_data()
-    if(nrow(data) == 0) return(leaflet() %>% addTiles())
+    if(nrow(data) == 0) return(leaflet() %>% addTiles(urlTemplate = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"))
     
     pal <- colorFactor(
       palette = c("red", "orange", "green", "blue"),
@@ -170,7 +170,11 @@ server <- function(input, output, session) {
     )
     
     leaflet(data) %>%
-      addTiles() %>%
+      addTiles(
+        urlTemplate = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+        attribution = "Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ",
+        options = tileOptions(minZoom = 1, maxZoom = 16)
+      ) %>%
       addCircleMarkers(
         ~lon, ~lat,
         color = ~pal(status),
@@ -382,7 +386,11 @@ server <- function(input, output, session) {
     data <- route_data()
     
     m <- leaflet() %>%
-      addTiles() %>%
+      addTiles(
+        urlTemplate = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+        attribution = "Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ",
+        options = tileOptions(minZoom = 1, maxZoom = 16)
+      ) %>%
       setView(lng = -87.63, lat = 41.88, zoom = 12)
     
     if(nrow(data$stops) > 0) {
