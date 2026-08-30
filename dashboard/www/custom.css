@@ -159,17 +159,24 @@ tr:hover td {
     padding: 0.8rem 2rem !important;
     box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5) !important;
 }
-/* Flex properties to center navigation links */
-.navbar-collapse {
-    display: flex !important;
-    justify-content: center !important;
-    flex-grow: 1 !important;
-}
-.navbar-nav {
-    margin-left: auto !important;
-    margin-right: auto !important;
-    display: flex !important;
-    justify-content: center !important;
+/* Absolute positioning to guarantee exact center on desktop */
+@media (min-width: 768px) {
+    .navbar {
+        position: relative !important;
+    }
+    .navbar-collapse {
+        position: absolute !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        display: flex !important;
+        justify-content: center !important;
+        width: max-content !important;
+    }
+    .navbar-nav {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 15px !important;
+    }
 }
 .navbar-brand {
     font-weight: 800 !important;
