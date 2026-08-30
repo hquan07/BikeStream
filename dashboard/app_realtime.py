@@ -272,19 +272,42 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs(["Live Map", "System KPIs", "Alerts (Reba
 # --- Tab 1: Live Map ---
 with tab1:
     df_stations = get_live_stations()
-    m = folium.Map(location=[41.88, -87.63], zoom_start=4, tiles="https://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}", attr="Esri")
-    if not df_stations.empty:
-        color_map = {"EMPTY": "red", "LOW": "orange", "HEALTHY": "green", "FULL": "blue"}
-        for _, row in df_stations.iterrows():
-            folium.CircleMarker(
-                location=[row['lat'], row['lon']],
-                radius=4,
-                color=color_map.get(row['status'], "gray"),
-                fill=True,
-                fill_opacity=0.8,
-                popup=f"<b>{row['station_name']}</b><br>Status: {row['status']}<br>Bikes: {row['num_bikes_available']}<br>Docks: {row['num_docks_available']}"
-            ).add_to(m)
-    st_folium(m, width=1200, height=600, returned_objects=[])
+    
+    col_map, col_stats = st.columns([3, 1])
+    
+    with col_map:
+        m = folium.Map(location=[41.88, -87.63], zoom_start=4, tiles="https://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}", attr="Esri")
+        if not df_stations.empty:
+            color_map = {"EMPTY": "red", "LOW": "orange", "HEALTHY": "green", "FULL": "blue"}
+            for _, row in df_stations.iterrows():
+                folium.CircleMarker(
+                    location=[row['lat'], row['lon']],
+                    radius=4,
+                    color=color_map.get(row['status'], "gray"),
+                    fill=True,
+                    fill_opacity=0.8,
+                    popup=f"<b>{row['station_name']}</b><br>Status: {row['status']}<br>Bikes: {row['num_bikes_available']}<br>Docks: {row['num_docks_available']}"
+                ).add_to(m)
+        st_folium(m, use_container_width=True, height=600, returned_objects=[])
+        
+    with col_stats:
+        st.markdown("### 📊 Quick Insights")
+        if not df_stations.empty:
+            total_live = len(df_stations)
+            empty_stations = len(df_stations[df_stations['status'] == 'EMPTY'])
+            healthy_stations = len(df_stations[df_stations['status'] == 'HEALTHY'])
+            
+            st.info(f"**📍 Tracking {total_live} Stations**")
+            st.error(f"**🚨 {empty_stations} Stations Empty**")
+            st.success(f"**✅ {healthy_stations} Stations Healthy**")
+            
+            st.markdown("---")
+            st.markdown("#### 🔝 Most Available Bikes")
+            top_bikes = df_stations.nlargest(5, 'num_bikes_available')[['station_name', 'num_bikes_available']]
+            top_bikes.columns = ['Station', 'Bikes']
+            st.dataframe(top_bikes, use_container_width=True)
+        else:
+            st.warning("Waiting for live data...")
 
 # --- Tab 2: System KPIs ---
 with tab2:
