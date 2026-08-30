@@ -182,7 +182,7 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs(["Live Map", "System KPIs", "Alerts (Reba
 # --- Tab 1: Live Map ---
 with tab1:
     df_stations = get_live_stations()
-    m = folium.Map(location=[41.88, -87.63], zoom_start=4, tiles="CartoDB dark_matter")
+    m = folium.Map(location=[41.88, -87.63], zoom_start=4, tiles="https://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}", attr="Esri")
     if not df_stations.empty:
         color_map = {"EMPTY": "red", "LOW": "orange", "HEALTHY": "green", "FULL": "blue"}
         for _, row in df_stations.iterrows():
@@ -261,7 +261,7 @@ with tab5:
                         duration = round(resp['routes'][0]['duration'] / 60, 0)
                         st.success(f"Route calculated! {distance} km, {duration} mins.")
                         
-                        m_route = folium.Map(location=[df_route['lat'].mean(), df_route['lon'].mean()], zoom_start=12, tiles="CartoDB dark_matter")
+                        m_route = folium.Map(location=[df_route['lat'].mean(), df_route['lon'].mean()], zoom_start=12, tiles="https://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}", attr="Esri")
                         folium.GeoJson(route_geom, name="Route").add_to(m_route)
                         for _, r in df_route.iterrows():
                             c = "#0d6efd" if r['action'] == "PICKUP" else "#dc3545"
