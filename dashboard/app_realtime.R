@@ -170,7 +170,7 @@ server <- function(input, output, session) {
     )
     
     leaflet(data) %>%
-      addProviderTiles(providers$CartoDB.DarkMatter) %>%
+      addTiles() %>%
       addCircleMarkers(
         ~lon, ~lat,
         color = ~pal(status),
@@ -382,7 +382,7 @@ server <- function(input, output, session) {
     data <- route_data()
     
     m <- leaflet() %>%
-      addProviderTiles(providers$CartoDB.DarkMatter) %>%
+      addTiles() %>%
       setView(lng = -87.63, lat = 41.88, zoom = 12)
     
     if(nrow(data$stops) > 0) {
