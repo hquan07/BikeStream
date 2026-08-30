@@ -91,6 +91,24 @@ ui <- page_navbar(
         plotlyOutput("heatmap_plot", height = "350px")
       )
     )
+  ),
+  
+  nav_panel("Fleet Routing",
+    layout_columns(
+      col_widths = c(4, 8),
+      card(
+        card_header("Routing Controls"),
+        selectInput("routing_city", "City", choices = c("chicago", "new_york", "san_francisco", "washington_dc", "boston")),
+        actionButton("calc_route", "Calculate Route", class = "btn-primary w-100"),
+        hr(),
+        card_header("Route Summary"),
+        tableOutput("route_summary")
+      ),
+      card(
+        card_header("Fleet Dispatch Route"),
+        leafletOutput("route_map", height = "600px")
+      )
+    )
   )
 )
 
@@ -276,6 +294,137 @@ server <- function(input, output, session) {
         plot_bgcolor = "transparent",
         font = list(color = "white")
       )
+
+  })
+  
+  # --- Fleet Routing ---
+  route_data <- eventReactive(input$calc_route, {
+    conn <- get_db_conn()
+    on.exit(dbDisconnect(conn))
+    
+    city <- input$routing_city
+    
+    # Get top FULL stations (surplus bikes)
+    full_query <- "
+      SELECT DISTINCT ON (station_id)
+          station_id, station_name, lat, lon,
+          num_bikes_available, num_docks_available, status, 'PICKUP' as action
+      FROM station_snapshots
+      WHERE city = $1
+        AND status = 'FULL'
+        AND time > NOW() - INTERVAL '5 minutes'
+      ORDER BY station_id, time DESC
+      LIMIT 3;
+    "
+    full_stations <- dbGetQuery(conn, full_query, params = list(city))
+    
+    # Get top EMPTY stations (need bikes)
+    empty_query <- "
+      SELECT DISTINCT ON (station_id)
+          station_id, station_name, lat, lon,
+          num_bikes_available, num_docks_available, status, 'DROPOFF' as action
+      FROM station_snapshots
+      WHERE city = $1
+        AND status = 'EMPTY'
+        AND time > NOW() - INTERVAL '5 minutes'
+      ORDER BY station_id, time DESC
+      LIMIT 3;
+    "
+    empty_stations <- dbGetQuery(conn, empty_query, params = list(city))
+    
+    all_stops <- rbind(full_stations, empty_stations)
+    
+    if(nrow(all_stops) < 2) {
+      return(list(stops = all_stops, route = NULL, message = "Not enough stations to route."))
+    }
+    
+    # Call OSRM public API for route
+    coords_str <- paste(
+      apply(all_stops, 1, function(r) paste(r["lon"], r["lat"], sep = ",")),
+      collapse = ";"
+    )
+    
+    osrm_url <- paste0(
+      "https://router.project-osrm.org/route/v1/driving/",
+      coords_str,
+      "?overview=full&geometries=geojson"
+    )
+    
+    tryCatch({
+      resp <- httr::GET(osrm_url, httr::timeout(15))
+      route_json <- httr::content(resp, as = "parsed")
+      
+      if(route_json$code == "Ok") {
+        coords <- route_json$routes[[1]]$geometry$coordinates
+        route_df <- data.frame(
+          lon = sapply(coords, `[[`, 1),
+          lat = sapply(coords, `[[`, 2)
+        )
+        distance_km <- round(route_json$routes[[1]]$distance / 1000, 1)
+        duration_min <- round(route_json$routes[[1]]$duration / 60, 0)
+        
+        list(
+          stops = all_stops,
+          route = route_df,
+          distance_km = distance_km,
+          duration_min = duration_min,
+          message = paste("Route:", distance_km, "km,", duration_min, "min")
+        )
+      } else {
+        list(stops = all_stops, route = NULL, message = "OSRM returned no route.")
+      }
+    }, error = function(e) {
+      list(stops = all_stops, route = NULL, message = paste("OSRM error:", e$message))
+    })
+  })
+  
+  output$route_map <- renderLeaflet({
+    data <- route_data()
+    
+    m <- leaflet() %>%
+      addProviderTiles(providers$CartoDB.DarkMatter) %>%
+      setView(lng = -87.63, lat = 41.88, zoom = 12)
+    
+    if(nrow(data$stops) > 0) {
+      pickup <- data$stops[data$stops$action == "PICKUP", ]
+      dropoff <- data$stops[data$stops$action == "DROPOFF", ]
+      
+      if(nrow(pickup) > 0) {
+        m <- m %>% addCircleMarkers(
+          data = pickup,
+          ~as.numeric(lon), ~as.numeric(lat),
+          color = "#0d6efd", radius = 10, fillOpacity = 0.9,
+          popup = ~paste0("<b>PICKUP:</b> ", station_name, "<br>Bikes: ", num_bikes_available)
+        )
+      }
+      if(nrow(dropoff) > 0) {
+        m <- m %>% addCircleMarkers(
+          data = dropoff,
+          ~as.numeric(lon), ~as.numeric(lat),
+          color = "#dc3545", radius = 10, fillOpacity = 0.9,
+          popup = ~paste0("<b>DROPOFF:</b> ", station_name, "<br>Docks: ", num_docks_available)
+        )
+      }
+    }
+    
+    if(!is.null(data$route)) {
+      m <- m %>% addPolylines(
+        data = data$route,
+        lng = ~lon, lat = ~lat,
+        color = "#00d4ff", weight = 4, opacity = 0.8
+      )
+    }
+    
+    m
+  })
+  
+  output$route_summary <- renderTable({
+    data <- route_data()
+    if(nrow(data$stops) == 0) return(data.frame(Message = "No data"))
+    
+    data$stops %>%
+      select(Action = action, Station = station_name, Bikes = num_bikes_available, Docks = num_docks_available)
+
   })
 }
 

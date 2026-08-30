@@ -41,9 +41,28 @@ services:
       timeout: 10s
       retries: 10
 
+  # --- Confluent Schema Registry ---
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.7.0
+    container_name: bs-schema-registry
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "8081:8081"
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka:9092
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+    healthcheck:
+      test: curl -f http://localhost:8081/subjects || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   # --- TimescaleDB (PostgreSQL + TimescaleDB extension) ---
   timescaledb:
-    image: timescale/timescaledb:latest-pg16
+    image: timescale/timescaledb-ha:pg16
     container_name: bs-timescaledb
     ports:
       - "5433:5432"
@@ -90,8 +109,12 @@ services:
     depends_on:
       kafka:
         condition: service_healthy
+      schema-registry:
+        condition: service_healthy
     environment:
       KAFKA_BROKER: kafka:9092
+      SCHEMA_REGISTRY_URL: http://schema-registry:8081
+      OPENWEATHERMAP_API_KEY: ${OPENWEATHERMAP_API_KEY:-}
     restart: unless-stopped
 
   # --- Spark Streaming Job ---
@@ -102,11 +125,13 @@ services:
       - spark-master
       - kafka
       - timescaledb
+      - schema-registry
     volumes:
       - spark_checkpoints:/tmp
     environment:
       SPARK_MASTER: spark://spark-master:7077
       KAFKA_BROKER: kafka:9092
+      SCHEMA_REGISTRY_URL: http://schema-registry:8081
       POSTGRES_HOST: timescaledb
       POSTGRES_PORT: 5432
       POSTGRES_USER: ${POSTGRES_USER}
@@ -130,6 +155,36 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     restart: unless-stopped
 
+  # --- ML Predictor (XGBoost) ---
+  ml-predictor:
+    build: ./ml-predictor
+    container_name: bs-ml-predictor
+    depends_on:
+      - timescaledb
+    environment:
+      POSTGRES_HOST: timescaledb
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - ml_models:/app/models
+    restart: unless-stopped
+
+  # --- pg_tileserv (Vector Tiles for Maps) ---
+  pg-tileserv:
+    image: pramsey/pg_tileserv:latest
+    container_name: bs-pg-tileserv
+    ports:
+      - "7800:7800"
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@timescaledb:5432/${POSTGRES_DB}
+    restart: unless-stopped
+
 volumes:
   pgdata:
   spark_checkpoints:
+  ml_models:
