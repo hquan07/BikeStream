@@ -152,31 +152,38 @@ tr:hover td {
 
 /* --- 5. Navbar & UI Controls --- */
 .navbar {
-    background: rgba(10, 10, 15, 0.8) !important;
-    -webkit-backdrop-filter: blur(15px);
-    backdrop-filter: blur(15px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    padding: 0.8rem 2rem;
+    background: rgba(15, 15, 20, 0.85) !important;
+    -webkit-backdrop-filter: blur(15px) !important;
+    backdrop-filter: blur(15px) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    padding: 0.8rem 2rem !important;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5) !important;
 }
 .navbar-brand {
-    font-weight: 700;
-    font-size: 1.4rem;
-    background: -webkit-linear-gradient(45deg, #00d4ff, #7b1fa2);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    letter-spacing: 1px;
+    font-weight: 800 !important;
+    font-size: 1.5rem !important;
+    background: -webkit-linear-gradient(45deg, #00d4ff, #b53cff) !important;
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    letter-spacing: 1px !important;
 }
 .nav-link {
-    font-weight: 600;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-    font-size: 0.9rem;
-    transition: color 0.3s;
+    font-weight: 600 !important;
+    letter-spacing: 1px !important;
+    text-transform: uppercase !important;
+    font-size: 0.85rem !important;
+    color: #8b9bb4 !important;
+    transition: color 0.3s ease, border-bottom 0.3s ease !important;
+    margin-right: 15px !important;
+    padding-bottom: 5px !important;
 }
-.nav-link.active {
+.nav-link:hover {
+    color: #ffffff !important;
+}
+.nav-link.active, .nav-item.active > .nav-link {
     color: #00d4ff !important;
-    border-bottom: 2px solid #00d4ff;
+    border-bottom: 2px solid #00d4ff !important;
 }
 
 .btn-primary {
