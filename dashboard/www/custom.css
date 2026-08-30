@@ -159,6 +159,18 @@ tr:hover td {
     padding: 0.8rem 2rem !important;
     box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5) !important;
 }
+/* Flex properties to center navigation links */
+.navbar-collapse {
+    display: flex !important;
+    justify-content: center !important;
+    flex-grow: 1 !important;
+}
+.navbar-nav {
+    margin-left: auto !important;
+    margin-right: auto !important;
+    display: flex !important;
+    justify-content: center !important;
+}
 .navbar-brand {
     font-weight: 800 !important;
     font-size: 1.5rem !important;
