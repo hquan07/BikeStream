@@ -11,6 +11,7 @@ import os
 import json
 import time
 import logging
+import threading
 from datetime import datetime, timezone
 
 import requests
@@ -176,6 +177,16 @@ def main():
     if producer is None:
         logger.critical("Could not connect to Kafka after 30 attempts. Exiting.")
         return
+
+    # --- Start Weather Scraper in background thread ---
+    from weather_scraper import start_weather_loop
+    weather_thread = threading.Thread(
+        target=start_weather_loop,
+        args=(producer, schema_registry_url),
+        daemon=True,
+    )
+    weather_thread.start()
+    logger.info("Weather scraper thread started.")
 
     # Pre-fetch station info for all cities (refresh every 30 minutes)
     info_caches = {}

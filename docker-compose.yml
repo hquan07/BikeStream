@@ -114,6 +114,7 @@ services:
     environment:
       KAFKA_BROKER: kafka:9092
       SCHEMA_REGISTRY_URL: http://schema-registry:8081
+      OPENWEATHERMAP_API_KEY: ${OPENWEATHERMAP_API_KEY:-}
     restart: unless-stopped
 
   # --- Spark Streaming Job ---

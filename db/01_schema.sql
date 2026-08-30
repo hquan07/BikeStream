@@ -118,3 +118,30 @@ CREATE INDEX IF NOT EXISTS idx_sp_city_target
 CREATE INDEX IF NOT EXISTS idx_sp_rebalancing
     ON station_predictions (needs_rebalancing_predicted, city, target_time DESC)
     WHERE needs_rebalancing_predicted = TRUE;
+
+-- ==========================================
+-- Weather: City weather snapshots
+-- ==========================================
+CREATE TABLE IF NOT EXISTS weather_snapshots (
+    time                TIMESTAMPTZ     NOT NULL,
+    city                TEXT            NOT NULL,
+    temp_celsius        DOUBLE PRECISION,
+    feels_like          DOUBLE PRECISION,
+    humidity            INTEGER,
+    pressure            INTEGER,
+    wind_speed          DOUBLE PRECISION,
+    weather_main        TEXT,
+    weather_desc        TEXT,
+    rain_1h_mm          DOUBLE PRECISION DEFAULT 0,
+    snow_1h_mm          DOUBLE PRECISION DEFAULT 0,
+    clouds_pct          INTEGER,
+    visibility_m        INTEGER
+);
+
+SELECT create_hypertable('weather_snapshots', 'time',
+    chunk_time_interval => INTERVAL '1 day',
+    if_not_exists => TRUE
+);
+
+CREATE INDEX IF NOT EXISTS idx_weather_city_time
+    ON weather_snapshots (city, time DESC);
