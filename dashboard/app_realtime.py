@@ -295,10 +295,10 @@ with tab1:
         st.markdown("### 📊 Quick Insights")
         if not df_stations.empty:
             st.markdown("#### 🗺️ Map Legend")
-            st.markdown("🔴 **EMPTY:** Hết xe đạp (Cần điều phối)")
-            st.markdown("🟠 **LOW:** Sắp hết xe (1-3 xe)")
-            st.markdown("🟢 **HEALTHY:** Trạng thái tốt (Đủ xe)")
-            st.markdown("🔵 **FULL:** Đầy xe (Hết chỗ đỗ)")
+            st.markdown("🔴 **EMPTY:** No bikes available")
+            st.markdown("🟠 **LOW:** Almost empty (1-3 bikes)")
+            st.markdown("🟢 **HEALTHY:** Good status")
+            st.markdown("🔵 **FULL:** No docks available")
             st.markdown("---")
             
             total_live = len(df_stations)
@@ -309,11 +309,6 @@ with tab1:
             st.error(f"**🚨 {empty_stations} Stations Empty**")
             st.success(f"**✅ {healthy_stations} Stations Healthy**")
             
-            st.markdown("---")
-            st.markdown("#### 🔝 Most Available Bikes")
-            top_bikes = df_stations.nlargest(5, 'num_bikes_available')[['station_name', 'num_bikes_available']]
-            top_bikes.columns = ['Station', 'Bikes']
-            st.dataframe(top_bikes, use_container_width=True)
         else:
             st.warning("Waiting for live data...")
 
