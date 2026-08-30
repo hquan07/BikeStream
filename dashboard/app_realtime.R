@@ -294,6 +294,7 @@ server <- function(input, output, session) {
         plot_bgcolor = "transparent",
         font = list(color = "white")
       )
+
   })
   
   # --- Fleet Routing ---
@@ -423,6 +424,7 @@ server <- function(input, output, session) {
     
     data$stops %>%
       select(Action = action, Station = station_name, Bikes = num_bikes_available, Docks = num_docks_available)
+
   })
 }
 
